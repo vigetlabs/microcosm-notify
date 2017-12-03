@@ -1,20 +1,23 @@
 import React from 'react'
 import Notification from './notification'
-import { InteractionManager } from 'microcosm-notify'
 
 const containerStyle = {
   position: 'fixed',
   bottom: 20,
-  left: 20
+  left: 20,
+  display: 'flex',
+  flexDirection: 'column'
 }
 
 class Notifications extends React.Component {
   render() {
-    let { notifications: ns, actions } = this.props
-    console.log(ns)
+    let { notifications: ns, callbacks } = this.props
+
     return (
       <div style={containerStyle}>
-        {ns.map(n => <Notification key={n.id} notification={n} {...actions} />)}
+        {ns.map(n => (
+          <Notification key={n.id} notification={n} callbacks={callbacks} />
+        ))}
       </div>
     )
   }

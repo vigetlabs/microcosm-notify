@@ -3,7 +3,9 @@ import { InteractionManager } from 'microcosm-notify'
 
 const notificationStyle = {
   border: '1px solid #333',
-  padding: 8
+  padding: 8,
+  marginTop: 8,
+  textAlign: 'left'
 }
 
 const dismissStyle = {
@@ -23,24 +25,41 @@ const messageStyle = {
 }
 
 class Notification extends React.Component {
+  componentDidMount() {
+    this.update()
+  }
+
+  componentWillUnmount() {
+    cancelAnimationFrame(this.frame)
+  }
+
+  update() {
+    this.frame = requestAnimationFrame(() => {
+      this.forceUpdate()
+      this.update()
+    })
+  }
+
   render() {
-    let { notification: n, dismiss } = this.props
+    let { notification } = this.props
 
     return (
-      <InteractionManager
-        style={notificationStyle}
-        component={n.dismissable ? 'button' : 'div'}
-        onClick={n.dismissable ? () => dismiss(n) : null}
-        notification={n}
-      >
+      <InteractionManager style={notificationStyle} notification={notification}>
         {this.renderDismissButton()}
-        <span style={messageStyle}>{n.message}</span>
+        <span style={messageStyle}>{notification.message}</span>
+        <div
+          style={{
+            height: 2,
+            background: 'blue',
+            width: notification.getProgress() * 100 + '%'
+          }}
+        />
       </InteractionManager>
     )
   }
 
   renderDismissButton() {
-    let { dismiss, notification } = this.props
+    let { callbacks, notification } = this.props
 
     if (!notification.dismissable) {
       return
@@ -50,7 +69,7 @@ class Notification extends React.Component {
       <div
         tabIndex="0"
         style={dismissStyle}
-        onClick={() => dismiss(notification)}
+        onClick={() => callbacks.dismiss(notification)}
       >
         Close
       </div>

@@ -22,6 +22,32 @@ const buttonStyle = {
   fontFamily: 'monospace'
 }
 
+const actionParams = {
+  delay: 3000,
+  choices: [
+    {
+      text: 'Undo (z)',
+      trigger: 'z',
+      actions: [
+        {
+          action: actions.notify,
+          params: {
+            messages: [
+              'Stand by, reversing time ...',
+              '... eliminating paradoxes ...',
+              'All done! We managed to avoid disaster... this time.'
+            ],
+            delay: 10000
+          }
+        },
+        {
+          action: actions.unnotify
+        }
+      ]
+    }
+  ]
+}
+
 class Basic extends Presenter {
   render() {
     return (
@@ -29,7 +55,9 @@ class Basic extends Presenter {
         <ActionButton
           style={buttonStyle}
           action={actions.notify}
+          value={actionParams}
           prepare={(value, event) => ({
+            ...value,
             message: randomWords({ min: 6, max: 14, join: ' ' })
           })}
         >
@@ -37,12 +65,12 @@ class Basic extends Presenter {
         </ActionButton>
 
         <Notifications>
-          {({ notification, actions }) =>
+          {({ notification, callbacks }) =>
             notification ? (
               <Notification
                 key={notification.id}
                 notification={notification}
-                {...actions}
+                callbacks={callbacks}
               />
             ) : null
           }

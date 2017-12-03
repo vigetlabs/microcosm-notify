@@ -2,23 +2,21 @@ import uuid from 'uuid'
 
 class Notification {
   static defaults = {
-    delay: 5000,
+    timeout: 5000,
     choices: [],
     messages: [],
     createdAt: null,
     displayedAt: null,
-    pausedAt: null,
-    pauseTime: 0,
+    lastPausedAt: null,
+    lastResumedAt: null,
+    pauseOnInteraction: true,
     paused: false,
-    dismissable: true,
-    interruptible: true,
-    immediate: false,
-    forceImmediate: false,
-    showProgress: true,
-    minimumDelay: 1000,
-    metadata: {},
-    preventDefault: true,
-    stopPropagation: true
+    pauseTime: 0,
+    dismissable: true, // can be dismissed
+    interruptible: true, // can be interrupted by an immediate note
+    reschedule: false, // persist interrupted notification in queue
+    immediate: false, // show immediately
+    forceImmediate: false // allow immediate note to interrupt uninterruptiple notes
   }
 
   constructor(params) {
@@ -32,13 +30,17 @@ class Notification {
       this.messages = [this.message]
     }
 
+    if (this.messages && !('message' in params)) {
+      this.message = this.messages[0]
+    }
+
     this.id = this.id || uuid()
-    this.delay = Math.max(this.delay, this.minimumDelay)
     this.createdAt = this.createdAt || Date.now()
   }
 
-  isDeferrable() {
-    return !this.dismissable && this.interruptible
+  getProgress() {
+    let remaining = (this.__timer__ && this.__timer__.next()) || this.timeout
+    return (this.timeout - remaining) / this.timeout
   }
 
   update(params) {

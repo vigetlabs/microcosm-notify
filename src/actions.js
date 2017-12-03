@@ -1,20 +1,46 @@
+import pauseable from 'pauseable'
+
 /* default UI layer show/hide action defaults */
-export const notify = x => x
+export const notify = n => n
 export const unnotify = x => x
 
 /* internal actions */
-export const show = x => x
-export const hide = x => x
+export const show = n => {
+  return (action, repo) => {
+    let timer = null
 
-export const pause = n =>
-  n.update({
-    paused: true,
-    pausedAt: Date.now()
-  })
+    if (n.timeout > 0) {
+      timer = pauseable.setTimeout(resolve, n.timeout)
+    }
 
-export const resume = n =>
-  n.update({
-    paused: false,
-    pausedAt: null,
-    pauseTime: n.pauseTime + Date.now() - n.pausedAt
-  })
+    let notification = n.update({
+      displayedAt: Date.now(),
+      __timer__: timer,
+      __action__: action
+    })
+
+    action.open(notification)
+
+    action.onCancel(cleanup)
+    action.onError(cleanup)
+
+    function cleanup() {
+      if (timer) {
+        timer.clear()
+        timer = null
+      }
+
+      return notification
+    }
+
+    function resolve() {
+      action.resolve(notification)
+    }
+  }
+}
+
+export const hide = n => n
+export const reset = n => n
+export const update = n => n
+export const pause = n => n
+export const resume = n => n

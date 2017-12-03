@@ -1,151 +1,149 @@
-import pauseable from 'pauseable'
-import Notification from './entity'
 import { get } from 'microcosm'
-import { show, hide, pause, resume } from './actions'
+import Notification from './entity'
+import { notify, unnotify, show, hide, reset, pause, resume } from './actions'
 
-export default {
-  setup(repo, { actions }) {
-    this.actions = actions
+function without(arr, notification) {
+  return arr.filter(n => n.id != notification.id)
+}
+
+class NotificationsEffect {
+  static defaultOptions = {
+    concurrency: 1,
+    preventDefault: true,
+    stopPropagation: true
+  }
+
+  setup(repo, options) {
+    this.options = Object.assign({}, this.constructor.defaultOptions, options)
     this.repo = repo
     this.queue = []
 
-    this.reset()
+    if (options.concurrency === 1) {
+      document.body.addEventListener('keydown', this.handleKeyDown, true)
+    }
+  }
 
-    document.body.addEventListener(
-      'keydown',
-      this.handleKeyDown.bind(this),
-      true
-    )
-  },
-
-  reset() {
-    this.timeout && this.timeout.clear()
-    this.focus = null
-  },
+  teardown() {
+    if (this.options.concurrency === 1) {
+      document.body.removeEventListener('keydown', this.handleKeyDown, true)
+    }
+  }
 
   register() {
     return {
-      [this.actions.show]: this.enqueue,
-      [this.actions.hide]: this.dequeue,
+      [show]: {
+        open: this.update,
+        update: this.update,
+        cancel: this.onComplete,
+        error: this.onComplete,
+        done: this.onComplete
+      },
       [hide]: this.hide,
       [pause]: this.pause,
-      [resume]: this.resume
-    }
-  },
+      [resume]: this.resume,
 
-  enqueue(_repo, params) {
+      [notify]: this.enqueue,
+      [unnotify]: this.dequeue
+    }
+  }
+
+  update(repo, notification) {
+    if (this.has(notification)) {
+      this.queue = this.queue.map(
+        n => (n.id === notification.id ? notification : n)
+      )
+
+      this.repo.push(reset, this.queue)
+    }
+  }
+
+  enqueue(repo, params) {
     let n = new Notification(params)
 
-    if (this.isImmediateNotification(n)) {
-      this.handleImmediateNotification(n)
-    } else {
-      this.handleNotification(n)
+    this.queue = n.immediate ? [n, ...this.queue] : [...this.queue, n]
+    this.repo.push(reset, this.queue)
+  }
+
+  dequeue(_repo, notification) {
+    let payload = notification || this.queue[0]
+    this.removeNotification(payload)
+  }
+
+  onComplete(_repo, notification) {
+    this.removeNotification(notification)
+  }
+
+  removeNotification(notification) {
+    if (this.has(notification)) {
+      this.queue = without(this.queue, notification)
+      this.repo.push(reset, this.queue)
     }
-  },
+  }
 
-  isImmediateNotification(n) {
-    return (
-      n.immediate && (get(this.n, 'interruptible', true) || n.forceImmediate)
-    )
-  },
-
-  handleImmediateNotification(n) {
-    if (this.focus) {
-      if (this.focus.isDeferrable()) {
-        this.queue.unshift(this.focus)
-      }
-
-      this.hideAndReset()
+  pause(_repo, notification) {
+    if (this.has(notification) && notification.__action__) {
+      notification.__action__.update(
+        notification.update({ paused: true, lastPausedAt: Date.now() })
+      )
+      notification.__timer__.pause()
     }
+  }
 
-    this.notify(n)
-  },
+  resume(_repo, notification) {
+    if (this.has(notification) && notification.__action__) {
+      let lastResumedAt = Date.now()
+      let elapsed = lastResumedAt - notification.lastPausedAt
 
-  handleNotification(n) {
-    this.queue.push(n)
+      notification.__action__.update(
+        notification.update({
+          paused: false,
+          pauseTime: notification.pauseTime + elapsed,
+          lastResumedAt
+        })
+      )
 
-    if (!this.paused && !this.focus) {
-      this.next()
+      notification.__timer__.resume()
     }
-  },
+  }
 
-  dequeue(_repo) {
-    if (this.focus) {
-      this.next()
+  hide(_repo, notification) {
+    if (this.has(notification) && notification.__action__) {
+      notification.__action__.cancel()
     }
-  },
+  }
 
-  next() {
-    if (this.focus) {
-      this.hideAndReset()
-    }
+  handleKeyDown = event => {
+    // handler only attached when concurrency is 1
+    let notification = this.getCurrentItems()[0]
+    if (!notification) return
 
-    this.notify(this.queue.shift())
-  },
-
-  hideAndReset() {
-    let n = this.focus
-
-    this.reset()
-    this.repo.push(hide, n)
-  },
-
-  notify(n) {
-    if (!n) return
-
-    this.focus = n
-    this.focus.displayedAt = Date.now()
-
-    this.repo.push(show, n).onDone(() => {
-      this.timeout = pauseable.setTimeout(this.next.bind(this), n.delay)
-    })
-  },
-
-  pause(_repo, n) {
-    if (this.timeout && n.id === get(this.focus, 'id')) {
-      this.focus = n
-      this.timeout.pause()
-    }
-  },
-
-  resume(_repo, n) {
-    if (this.isPaused() && n.id === get(this.focus, 'id')) {
-      this.focus = n
-      this.timeout.resume()
-    }
-  },
-
-  hide(_repo, { id }) {
-    if (id === get(this.focus, 'id')) {
-      this.reset()
-      this.next()
-    }
-  },
-
-  handleKeyDown(event) {
-    if (!this.focus) return
-
-    let task = this.focus.choices.find(
+    let task = notification.choices.find(
       a => get(a, 'trigger', '').toLowerCase() == event.key.toLowerCase()
     )
 
     if (get(task, 'actions.length')) {
       this.processTask(task)
     }
-  },
+  }
 
   processTask(task) {
-    task.actions.forEach(({ action, params }) => {
+    task.actions.forEach(({ action, params, onClick = () => {} }) => {
       if (action) {
-        this.repo.push(action, params)
+        this.repo.push(action, params).onDone(onClick)
       }
     })
 
-    if (this.focus.preventDefault) event.preventDefault()
-    if (this.focus.stopPropagation) event.stopPropagation()
-  },
+    if (this.options.preventDefault) event.preventDefault()
+    if (this.options.stopPropagation) event.stopPropagation()
+  }
 
-  isPaused() {
-    return this.timeout && !this.timeout.isDone() && this.timeout.isPaused()
+  has(notification) {
+    return this.getCurrentItems().find(n => n.id == notification.id)
+  }
+
+  getCurrentItems() {
+    return this.queue.slice(0, this.options.concurrency)
   }
 }
+
+export default NotificationsEffect

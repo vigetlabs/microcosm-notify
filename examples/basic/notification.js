@@ -1,4 +1,5 @@
 import React from 'react'
+import Choices from './choices'
 import { InteractionManager } from 'microcosm-notify'
 
 const containerStyle = {
@@ -30,25 +31,29 @@ const messageStyle = {
 
 class Notification extends React.Component {
   render() {
-    let { notification: n, dismiss } = this.props
+    let { notification, callbacks } = this.props
 
     return (
       <div style={containerStyle}>
         <InteractionManager
           style={notificationStyle}
-          component={n.dismissable ? 'button' : 'div'}
-          onClick={n.dismissable ? () => dismiss(n) : null}
-          notification={n}
+          notification={notification}
         >
           {this.renderDismissButton()}
-          <span style={messageStyle}>{n.message}</span>
+
+          <span style={messageStyle}>{notification.messages.join('\n')}</span>
+
+          <Choices
+            choices={notification.choices}
+            processActions={callbacks.processActions}
+          />
         </InteractionManager>
       </div>
     )
   }
 
   renderDismissButton() {
-    let { dismiss, notification } = this.props
+    let { callbacks, notification } = this.props
 
     if (!notification.dismissable) {
       return
@@ -58,7 +63,7 @@ class Notification extends React.Component {
       <div
         tabIndex="0"
         style={dismissStyle}
-        onClick={() => dismiss(notification)}
+        onClick={() => callbacks.dismiss(notification)}
       >
         Close
       </div>

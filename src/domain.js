@@ -1,9 +1,9 @@
 import Effect from './effect'
-import { show, hide, pause, resume } from './actions'
+import { reset, update, pause, resume } from './actions'
 
 class NotificationDomain {
-  setup(repo, { actions }) {
-    repo.addEffect(Effect, { actions })
+  setup(repo, options) {
+    repo.addEffect(Effect, options)
   }
 
   getInitialState() {
@@ -12,28 +12,18 @@ class NotificationDomain {
 
   register() {
     return {
-      [show]: this.add,
-      [hide]: this.remove,
-      [pause]: this.pause,
-      [resume]: this.resume
+      [reset]: this.reset,
+      [update]: this.update,
+      [pause]: this.update,
+      [resume]: this.update
     }
   }
 
-  add(notifications, notification) {
-    return notifications.concat([notification])
+  reset(_state, notifications) {
+    return notifications
   }
 
-  remove(notifications, notification) {
-    return notifications.filter(n => n.id !== notification.id)
-  }
-
-  pause(notifications, notification) {
-    return notifications.map(n => {
-      return n.id === notification.id ? notification : n
-    })
-  }
-
-  resume(notifications, notification) {
+  update(notifications, notification) {
     return notifications.map(n => {
       return n.id === notification.id ? notification : n
     })
