@@ -10,8 +10,14 @@ const containerStyle = {
 }
 
 class Notifications extends React.Component {
+  static defaultProps = {
+    notifications: []
+  }
+
   render() {
     let { notifications: ns, callbacks } = this.props
+
+    if (!ns.length) return null
 
     return (
       <div style={containerStyle}>

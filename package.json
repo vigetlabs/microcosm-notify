@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server"
+    "start": "webpack-dev-server",
+    "build":
+      "NODE_ENV=production webpack --env.production -p --config config/webpack.lib.js"
   },
   "author": "Solomon Hawk <solomon.hawk@viget.com> (http://viget.com/)",
   "license": "ISC",
@@ -13,7 +15,6 @@
     "microcosm": "^12.13.3",
     "pauseable": "^0.3.0",
     "prop-types": "^15.6.0",
-    "random-words": "^0.0.1",
     "react": "^16.1.1",
     "react-dom": "^16.1.1",
     "uuid": "^3.1.0"
@@ -36,6 +37,7 @@
     "invariant": "^2.2.2",
     "jest": "^21.2.1",
     "prettier": "^1.8.2",
+    "random-words": "^0.0.1",
     "webpack": "^3.9.1",
     "webpack-dev-server": "^2.9.5",
     "webpack-merge": "^4.1.1"

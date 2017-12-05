@@ -39,8 +39,12 @@ class Notification {
   }
 
   getProgress() {
-    let remaining = (this.__timer__ && this.__timer__.next()) || this.timeout
-    return (this.timeout - remaining) / this.timeout
+    if (this.timeout) {
+      let remaining = (this.__timer__ && this.__timer__.next()) || this.timeout
+      return (this.timeout - remaining) / this.timeout
+    }
+
+    return 0
   }
 
   update(params) {

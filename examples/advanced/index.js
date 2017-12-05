@@ -29,25 +29,20 @@ class Advanced extends Presenter {
         <ActionButton
           style={buttonStyle}
           action={actions.notify}
-          prepare={(value, event) => ({
-            message: randomWords({ min: 6, max: 14, join: ' ' }),
-            immediate: true,
-            pauseOnInteraction: false
+          prepare={() => ({
+            message: randomWords({ min: 6, max: 14, join: ' ' })
           })}
         >
           Test!
         </ActionButton>
 
-        <NotificationsManager concurrency={Infinity}>
-          {({ notifications, actions, callbacks }) =>
-            notifications ? (
-              <Notifications
-                notifications={notifications}
-                actions={actions}
-                callbacks={callbacks}
-              />
-            ) : null
-          }
+        <NotificationsManager concurrency={3}>
+          {({ notifications, callbacks }) => (
+            <Notifications
+              notifications={notifications}
+              callbacks={callbacks}
+            />
+          )}
         </NotificationsManager>
       </div>
     )
