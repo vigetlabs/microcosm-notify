@@ -73,35 +73,16 @@ class NotificationsEffect {
     this.removeNotification(notification)
   }
 
-  removeNotification(notification) {
-    if (this.has(notification)) {
-      this.queue = without(this.queue, notification)
-      this.repo.push(reset, this.queue)
-    }
-  }
-
   pause(_repo, notification) {
     if (this.has(notification) && notification.__action__) {
-      notification.__action__.update(
-        notification.update({ paused: true, lastPausedAt: Date.now() })
-      )
+      notification.__action__.update(notification.update({ paused: true }))
       notification.__timer__.pause()
     }
   }
 
   resume(_repo, notification) {
     if (this.has(notification) && notification.__action__) {
-      let lastResumedAt = Date.now()
-      let elapsed = lastResumedAt - notification.lastPausedAt
-
-      notification.__action__.update(
-        notification.update({
-          paused: false,
-          pauseTime: notification.pauseTime + elapsed,
-          lastResumedAt
-        })
-      )
-
+      notification.__action__.update(notification.update({ paused: false }))
       notification.__timer__.resume()
     }
   }
@@ -135,6 +116,13 @@ class NotificationsEffect {
 
     if (this.options.preventDefault) event.preventDefault()
     if (this.options.stopPropagation) event.stopPropagation()
+  }
+
+  removeNotification(notification) {
+    if (this.has(notification)) {
+      this.queue = without(this.queue, notification)
+      this.repo.push(reset, this.queue)
+    }
   }
 
   has(notification) {

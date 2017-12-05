@@ -7,11 +7,8 @@ class Notification {
     messages: [],
     createdAt: null,
     displayedAt: null,
-    lastPausedAt: null,
-    lastResumedAt: null,
     pauseOnInteraction: true,
     paused: false,
-    pauseTime: 0,
     dismissable: true, // can be dismissed
     interruptible: true, // can be interrupted by an immediate note
     reschedule: false, // persist interrupted notification in queue
